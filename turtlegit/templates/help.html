@@ -1,0 +1,34 @@
+<pre>      
+        .-turtlegit-. 
+      Not A Triplestore       ___
+      _  __     __  .----.   (^_^).-----.   
+     (^\(<>)   (^_\(><><><)    \(<><><><>)
+      `uu"uu      `uu"""uu      `uu""""uu
+
+</pre>
+<h2>What!?</h2>
+<p>turtlegit is a Linked Data endpoint backed by local git repository that stores graphs as ordered turtle (.ttl) files.</p>
+<p>Supports SPARQL Graph HTTP Protocol (GET / PUT / POST) with different RDF content-types, but everything is eventually serialized as ordered turtle.</p>
+
+<h2>Why?</h2>
+<p>Sometimes provenance is more important than speed.</p>
+<p>Enables collaborative editing with conflict resolution.</p>
+
+<h2>How to use it?</h2>
+<p>Simply GET / POST / PUT http://127.0.0.1:5000/{myRepoDir}?graph=file:///etc/{workspace}/{myRepoDir}/myTurtleFile.ttl</p>
+<h2>Configuration</h2>
+<p>Configure your workspace directory to settings.ini</p>
+<p>Create git repository under workspace using git init. etc</p>
+<p>Add some ttl files. Wonder. </p>
+
+<div>
+<h2>Future milestones</h2>
+<ul>
+<li>Add custom otsrdflib sorters to settings</li>
+<li>Support for creating new files using rdflib memory based SPARQL construct queries</li>
+<li>Support for updating files using rdflib memory based SPARQL Update</li>
+<li>Support for select queries using rdflib memory based SPARQL queries</li>
+<li>Support for full SPARQL using SparqlWrapper as proxy to any triplestore</li>
+<li>Support for creating new files using N3 forward chaining with Fuxi (wait until dust settles in rdflib/fuxi)</li>
+</ul>
+</div>
