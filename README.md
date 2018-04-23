@@ -11,6 +11,7 @@ Currently supports SPARQL Graph HTTP Protocol (GET / PUT / POST) with "text/turt
 2. Support memory based SPARQL queries (Construct & Update files)
 3. Support for full SPARQL using SparqlWrapper as proxy to any 'real' triplestore
 4. Support for JSON-LD Framing and storing JSON-LD frames
+5. PATCH api using git syntax +/- triples
 
 ## Maybe then?
 
