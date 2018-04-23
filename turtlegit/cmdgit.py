@@ -31,6 +31,10 @@ def rmAll(repoDir):
     cmd = 'git rm *'
     return pipeSuccess(cmd,repoDir)
 
+def checkout(branch, repoDir):
+    cmd ='git checkout '+branch
+    return pipeSuccess(cmd, repoDir)
+
 def pipeSuccess(cmd, repoDir):
     try:
         pipe = Popen(cmd, shell=True, cwd=repoDir,stdout = PIPE,stderr = PIPE)
@@ -42,6 +46,18 @@ def pipeSuccess(cmd, repoDir):
         log.warn('Exception: ' + str(exception))
     else:
         return pipe.wait() == 0
+
+def branchlist(repoDir):
+    cmd = 'git branch --list'
+    p = Popen(cmd, shell=True, cwd=repoDir, stdout=PIPE)
+    output = p.communicate()[0].decode('ascii')
+    return output
+
+def hist(repoDir):
+    cmd = 'git log --oneline --no-decorate'
+    p = Popen(cmd, shell=True, cwd=repoDir, stdout=PIPE)
+    output = p.communicate()[0].decode('ascii')
+    return output
 
 def size(repoDir):
     cmd = 'git count-objects -v -H '
@@ -66,7 +82,15 @@ def loglast(repoDir):
     cmd = 'git log -p -1 '
     p = Popen(cmd, shell=True, cwd=repoDir, stdout=PIPE)
     output = p.communicate()[0].decode('utf-8')
-    return output   
+    return output
+
+def diffnoindex(file1, file2, repoDir):
+    log.info("TEST")
+    cmd = 'git diff --no-index --relative '+file1+' '+file2
+    log.info(cmd)
+    p = Popen(cmd, shell=True, cwd=repoDir, stdout=PIPE)
+    output = p.communicate()[0].decode('utf-8')
+    return output
 
 def setHome():
     cmd = 'set HOME='

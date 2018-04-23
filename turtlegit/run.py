@@ -9,7 +9,7 @@ import posixpath
 import logging as log
 from urllib.parse import quote_plus, unquote_plus
 import io
-from turtlegit.cmdgit import status, size, lsfiles, add, commit, loglast
+from turtlegit.cmdgit import status, size, lsfiles, add, commit, loglast, diffnoindex, hist, branchlist, checkout
 import pkg_resources
 import stat
 import os
@@ -17,6 +17,7 @@ from os import path, remove, makedirs, chmod, system
 from turtlegit.filegraph import FileGraph
 from turtlegit.default_settings import Config, Logging
 import shutil
+import whatthepatch
 
 app = Flask(__name__)
 
@@ -60,9 +61,12 @@ def run(repo):
         log.info("Repository size: "+size(repopath))
     
     graph = request.args.get('graph','')
+    branch = request.args.get('branch','')
+    checkoutBranch(branch, repopath)
     
     if graph == "":
-        return render_template('list.html',data=pathsToURIs(repo, lsfiles(repopath)));
+        filelist = lsfiles(repopath)
+        return render_template('list.html',data=pathsToURIs(repo, filelist));
     elif not match(graph,rule='absolute_IRI'):
         log.debug("Graph URI is not valid")
         abort(406)
@@ -78,6 +82,7 @@ def run(repo):
         else:
             abort(404)
     elif request.method == 'POST':
+        #TODO: Abort on history branches. Create list of actual branches?
         log.debug("POST to "+fileGraph.iri)
         if fileGraph.doExists():
             fileGraph.parsePath()
@@ -86,12 +91,14 @@ def run(repo):
         autoAddAndCommit(fileGraph, "POST - Adding graph "+fileGraph.iri)
         return loglast(repopath)
     elif request.method == 'PUT':
+        #TODO: Abort on history branches
         log.debug("PUT to "+fileGraph.iri)
         fileGraph.parseString(request.data.decode('utf-8'))
         fileGraph.serialize()
         autoAddAndCommit(fileGraph, "PUT - Writing graph "+fileGraph.iri)
         return loglast(repopath)
     elif request.method == 'DELETE':
+        #TODO: Abort on history branches
         log.debug("DELETE to "+fileGraph.iri)
         if fileGraph.doExists():
             deleteFile(fileGraph.filepath)
@@ -101,16 +108,53 @@ def run(repo):
             log.debug("GRAPH "+fileGraph.iri+" DOES NOT EXIST in "+fileGraph.filepath)
             abort(404)
     else:
-        abort(406)
-        
+        abort(406)    
         
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() == 'ttl'
 
-##TODO: Create better template
+@app.route('/<repo>/history', methods=['GET'])
+def history(repo):
+    repopath = path.join(workspace, repo)
+    return hist(repopath)
+
+@app.route('/<repo>/branch', methods=['GET'])
+def branch(repo):
+    repopath = path.join(workspace, repo)
+    return branchlist(repopath)
+
+@app.route('/<repo>/diff', methods=['GET'])
+def diff(repo):
+    repopath = posixpath.join(workspace, repo)
+    branch = request.args.get('branch','')
+    checkoutBranch(branch, repopath)
+    if request.method == 'GET':
+        graph1 = request.args.get('a','')
+        graph2 = request.args.get('b','')
+        fileGraph1 = FileGraph(graph1, domain, repopath, repo)
+        fileGraph2 = FileGraph(graph2, domain, repopath, repo)
+        log.info(fileGraph1.filename)
+        log.info(fileGraph2.filename)
+        patchtext = diffnoindex(fileGraph1.filename, fileGraph2.filename, repopath)
+        # WTF tuple-structure in wthatthepatch
+        # https://pypi.org/project/whatthepatch/
+        patch = list(whatthepatch.parse_patch(patchtext))[0][1]
+        log.info(patchtext)
+        for diff in patch:
+            a,b,line = diff
+            if(b==None):
+                print("In a, not in b: "+line)
+            if(a==None):
+                print("In b, not in a: "+line)
+        #TODO: Do something with this ... huh?
+        return patchtext
+    
+##TODO: Create better templated
 @app.route('/<repo>/upload', methods=['GET', 'POST'])
 def upload_file(repo):
     repopath = posixpath.join(workspace, repo)
+    branch = request.args.get('branch','')
+    checkoutBranch(branch, repopath)    
     if request.method == 'POST':
         # check if the post request has the file part
         if 'file' not in request.files:
@@ -139,8 +183,13 @@ def upload_file(repo):
          <input type=submit value=Upload>
     </form>
     '''        
-        
-        
+
+def checkoutBranch(branch, repopath):
+    if branch != "":
+        checkout(branch, repopath)
+    else:
+        branch="master"
+        checkout(branch, repopath)
         
 def autoAddAndCommit(fileGraph, message):
     if autoadd:
@@ -157,11 +206,15 @@ def pathsToURIs(service, files):
     return files
 
 def notSupportedContentType(request):
-    if request.headers['Content-Type'] == 'text/turtle':
-        return False
-    else:
-        return True
-    
+    try:
+        if request.headers['Content-Type'] in ['text/turtle','text/html']:
+            return False
+        else:
+            return True
+    except KeyError:
+            #TODO: Returns with browser but can fail with POST/PUT 
+            return False
+        
 def getDirFromWorkspace(dirName):
     return posixpath.join(getWorkspacePath(),dirName)
     
